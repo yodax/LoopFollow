@@ -149,10 +149,10 @@ extension MainViewController {
             
             let predictiveNumReadings = Int(UserDefaultsRepository.alertUrgentLowPredictiveMinutes.value / 5)
             var predictiveTrigger = false
-            if  !predictionData.isEmpty {
+            if  !predictionDataIOB.isEmpty {
                 for i in 0..<predictiveNumReadings {
-                    if predictionData.count > i {
-                        if Float(predictionData[i].sgv) <= UserDefaultsRepository.alertUrgentLowBG.value {
+                    if predictionDataIOB.count > i {
+                        if Float(predictionDataIOB[i].sgv) <= UserDefaultsRepository.alertUrgentLowBG.value {
                             predictiveTrigger = true
                         }
                     }
