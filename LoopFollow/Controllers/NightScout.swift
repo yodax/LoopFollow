@@ -451,12 +451,30 @@ extension MainViewController {
     }
     
     // NS Device Status Response Processor
+    fileprivate func processPredictionFor(_ lastLoopTime: TimeInterval, _ prediction: [Int], graphData: inout [ShareGlucoseData]) {
+        if UserDefaultsRepository.downloadPrediction.value && latestLoopTime < lastLoopTime {
+            graphData.removeAll()
+            var predictionTime = lastLoopTime
+            let toLoad = Int(UserDefaultsRepository.predictionToLoad.value * 12)
+            var i = 0
+            while i <= toLoad {
+                if i < prediction.count {
+                    let prediction = ShareGlucoseData(sgv: prediction[i], date: predictionTime, direction: "flat")
+                    graphData.append(prediction)
+                    predictionTime += 300
+                }
+                i += 1
+            }
+        }
+    }
+    
     func updateDeviceStatusDisplay(jsonDeviceStatus: [[String:AnyObject]]) {
         self.clearLastInfoData(index: 0)
         self.clearLastInfoData(index: 1)
         self.clearLastInfoData(index: 3)
         self.clearLastInfoData(index: 4)
         self.clearLastInfoData(index: 5)
+        tableData.removeAll()
         if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "Process: device status") }
         if jsonDeviceStatus.count == 0 {
             return
@@ -475,23 +493,25 @@ extension MainViewController {
             if let lastPumpTime = formatter.date(from: (lastPumpRecord["clock"] as! String))?.timeIntervalSince1970  {
                 if let reservoirData = lastPumpRecord["reservoir"] as? Double {
                     latestPumpVolume = reservoirData
-                    tableData[5].value = String(format:"%.0f", reservoirData) + "U"
+                    //tableData[5].value = String(format:"%.0f", reservoirData) + "U"
+                    tableData.append(infoData(name: "Reservoir", value: String(format:"%.0f", reservoirData) + "U"))
                 } else {
                     latestPumpVolume = 50.0
-                    tableData[5].value = "50+U"
+                    //tableData[5].value = "50+U"
+                    tableData.append(infoData(name: "Reservoir", value: String(format:"%.0f", latestPumpVolume) + "U"))
                 }
                 
                 if let uploader = lastDeviceStatus?["uploader"] as? [String:AnyObject] {
                     let upbat = uploader["battery"] as! Double
-                    tableData[4].value = String(format:"%.0f", upbat) + "%"
+                    tableData.append(infoData(name: "Uploader", value: String(format:"%.0f", upbat) + "%"))
                 }
             }
         }
         
         // Loop
-        if let lastLoopRecord = lastDeviceStatus?["loop"] as! [String : AnyObject]? {
+        if let lastLoopRecord = lastDeviceStatus?["openaps"] as! [String : AnyObject]? {
             //print("Loop: \(lastLoopRecord)")
-            if let lastLoopTime = formatter.date(from: (lastLoopRecord["timestamp"] as! String))?.timeIntervalSince1970  {
+            if let lastLoopTime = formatter.date(from: (lastLoopRecord["suggested"]?["timestamp"] as! String))?.timeIntervalSince1970  {
                 UserDefaultsRepository.alertLastLoopTime.value = lastLoopTime
                 if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "lastLoopTime: " + String(lastLoopTime)) }
                 if let failure = lastLoopRecord["failureReason"] {
@@ -507,41 +527,98 @@ extension MainViewController {
 
                         }
                     }
-                    if let iobdata = lastLoopRecord["iob"] as? [String:AnyObject] {
-                        tableData[0].value = String(format:"%.2f", (iobdata["iob"] as! Double))
-                        latestIOB = String(format:"%.2f", (iobdata["iob"] as! Double))
-                    }
-                    if let cobdata = lastLoopRecord["cob"] as? [String:AnyObject] {
-                        tableData[1].value = String(format:"%.0f", cobdata["cob"] as! Double)
-                        latestCOB = String(format:"%.0f", cobdata["cob"] as! Double)
-                    }
-                    if let predictdata = lastLoopRecord["predicted"] as? [String:AnyObject] {
-                        let prediction = predictdata["values"] as! [Int]
-                        PredictionLabel.text = bgUnits.toDisplayUnits(String(Int(prediction.last!)))
-                        PredictionLabel.textColor = UIColor.systemPurple
-                        if UserDefaultsRepository.downloadPrediction.value && latestLoopTime < lastLoopTime {
-                            predictionData.removeAll()
-                            var predictionTime = lastLoopTime
-                            let toLoad = Int(UserDefaultsRepository.predictionToLoad.value * 12)
-                            var i = 0
-                            while i <= toLoad {
-                                if i < prediction.count {
-                                    let prediction = ShareGlucoseData(sgv: prediction[i], date: predictionTime, direction: "flat")
-                                    predictionData.append(prediction)
-                                    predictionTime += 300
-                                }
-                                i += 1
+                    if wasEnacted {
+                        if let iobdata = lastLoopRecord["enacted"]?["IOB"] as? Double {
+                            //tableData[0].value = String(format:"%.2f", (iobdata))
+                            tableData.append(infoData(name: "IOB", value: String(format: "%.2f", iobdata)))
+                            latestIOB = String(format:"%.2f", (iobdata))
+                        }
+                        if let cobdata = lastLoopRecord["enacted"]?["COB"] as? Int64 {
+                            //tableData[1].value = String(cobdata)
+                            latestCOB = String(cobdata)
+                        }
+                    
+                        if let predictdata = lastLoopRecord["enacted"]?["predBGs"] as? [String:AnyObject] {
+                            if let prediction = predictdata["IOB"] as? [Int] {
+                                //PredictionLabel.text = bgUnits.toDisplayUnits(String(Int(prediction.last!)))
+                                //PredictionLabel.textColor = UIColor.systemPurple
+                                
+                                processPredictionFor(lastLoopTime, prediction, graphData: &predictionDataIOB)
                             }
                             
-                            let predMin = prediction.min()
-                            let predMax = prediction.max()
-                            tableData[9].value = bgUnits.toDisplayUnits(String(predMin!)) + "/" + bgUnits.toDisplayUnits(String(predMax!))
+                            if let prediction = predictdata["ZT"] as? [Int] {
+                                processPredictionFor(lastLoopTime, prediction, graphData: &predictionDataZT)}
+                            
+                            if let prediction = predictdata["COB"] as? [Int] {
+                                processPredictionFor(lastLoopTime, prediction, graphData: &predictionDataCOB)}
+                            else
+                            {
+                                predictionDataCOB.removeAll()
+                            }
+                            
+                            if let prediction = predictdata["UAM"] as? [Int] {
+                                processPredictionFor(lastLoopTime, prediction, graphData: &predictionDataUAM)}
+                            else
+                            {
+                                predictionDataUAM.removeAll()
+                            }
                             
                             updatePredictionGraph()
                         }
-                    }
-                    if let recBolus = lastLoopRecord["recommendedBolus"] as? Double {
-                        tableData[8].value = String(format:"%.2fU", recBolus)
+                        
+                        if let rate = lastLoopRecord["enacted"]?["rate"] as? Double {
+                            tableData.append(infoData(name: "Basal", value: String(format: "%.2f", rate) + " U/hr"))
+                        }
+                        
+                        if let reason = lastLoopRecord["enacted"]?["reason"] as? String {
+                            //ReasonLabel.text = reason
+                            let splitReasons = reason.replacingOccurrences(of: "&lt;", with: "<").replacingOccurrences(of: "&gt;", with: ">").split(separator: ";")
+                            for semicolonSplitReason in splitReasons {
+                                let reasons = semicolonSplitReason.split(separator: ",")
+                                for r in reasons {
+                                    var cleanR = r.trimmingCharacters(in: NSCharacterSet.whitespaces)
+                                    
+                                    //cleanR = cleanR.replacingOccurrences(of: "&lt;", with: "<")
+                                    //cleanR = cleanR.replacingOccurrences(of: "&gt;", with: ">")
+                                    
+                                    if (cleanR.contains(":"))
+                                    {
+                                        let splitReason = cleanR.split(separator: ":")
+                                        tableData.append(infoData(name: String(splitReason[0]).trimmingCharacters(in: NSCharacterSet.whitespaces), value: String(splitReason[1])))
+                                    }
+                                    else if (cleanR.starts(with: "IOBpredBG"))
+                                    {
+                                        tableData.append(infoData(name: "IOB pred BG", value: cleanR.replacingOccurrences(of: "IOBpredBG", with: "")))
+                                    }
+                                    else if (r.starts(with: "COBpredBG"))
+                                    {
+                                        tableData.append(infoData(name: "COBpredBG", value: cleanR.replacingOccurrences(of: "COBpredBG", with: "")))
+                                    }
+                                    else if (cleanR.starts(with: "insulinReq"))
+                                    {
+                                        tableData.append(infoData(name: "insulinReq", value: cleanR.replacingOccurrences(of: "insulinReq", with: "")))
+                                    }
+                                    else if (cleanR.starts(with: "Eventual BG"))
+                                    {
+                                        tableData.append(infoData(name: "Eventual BG", value: cleanR.replacingOccurrences(of: "Eventual BG ", with: "")))
+                                    }
+                                    else if (cleanR.starts(with: "temp"))
+                                    {
+                                        tableData.append(infoData(name: "temp", value: cleanR.replacingOccurrences(of: "temp ", with: "")))
+                                    }
+                                    else if (cleanR.filter { $0 == " " }.count == 1)
+                                    {
+                                        let splitReason = cleanR.split(separator: " ")
+                                        tableData.append(infoData(name: String(splitReason[0]).trimmingCharacters(in: NSCharacterSet.whitespaces), value: String(splitReason[1])))
+                                    }
+                                    else
+                                    {
+                                        tableData.append(infoData(name: "", value: cleanR))
+                                    }
+                                }
+                            }
+                            
+                        }
                     }
                     if let loopStatus = lastLoopRecord["recommendedTempBasal"] as? [String:AnyObject] {
                         if let tempBasalTime = formatter.date(from: (loopStatus["timestamp"] as! String))?.timeIntervalSince1970 {
@@ -599,7 +676,7 @@ extension MainViewController {
                 let maxValue = lastCorrection["maxValue"] as! Double
                 oText += bgUnits.toDisplayUnits(String(minValue)) + "-" + bgUnits.toDisplayUnits(String(maxValue)) + ")"
                 
-                tableData[3].value =  oText
+                //[3].value =  oText
             }
         }
         
@@ -702,7 +779,7 @@ extension MainViewController {
             formatter.zeroFormattingBehavior = [ .pad ] // Pad with zeroes where appropriate for the locale
             
             let formattedDuration = formatter.string(from: secondsAgo)
-            tableData[7].value = formattedDuration ?? ""
+            //tableData[7].value = formattedDuration ?? ""
         }
         infoTable.reloadData()
     }
@@ -782,7 +859,7 @@ extension MainViewController {
             formatter.zeroFormattingBehavior = [ .pad ] // Pad with zeroes where appropriate for the locale
             
             let formattedDuration = formatter.string(from: secondsAgo)
-            tableData[6].value = formattedDuration ?? ""
+            //tableData[6].value = formattedDuration ?? ""
         }
         infoTable.reloadData()
     }
@@ -994,7 +1071,11 @@ extension MainViewController {
                     tempBasal.append(entry!)
                 case "Correction Bolus":
                     bolus.append(entry!)
+                case "Bolus":
+                    bolus.append(entry!)
                 case "Meal Bolus":
+                    carbs.append(entry!)
+                case "Carb Correction":
                     carbs.append(entry!)
                 case "Temporary Override":
                     temporaryOverride.append(entry!)
@@ -1326,7 +1407,8 @@ extension MainViewController {
             basalData.append(endDot)
             
         }
-        tableData[2].value = latestBasal
+        //tableData[2].value = latestBasal
+        //tableData.append(infoData(name: "Basal", value: latestBasal))
         infoTable.reloadData()
         if UserDefaultsRepository.graphBasal.value {
             updateBasalGraph()

@@ -107,7 +107,10 @@ class MainViewController: UIViewController, UITableViewDataSource, ChartViewDele
     var bolusData: [bolusGraphStruct] = []
     var carbData: [carbGraphStruct] = []
     var overrideGraphData: [DataStructs.overrideStruct] = []
-    var predictionData: [ShareGlucoseData] = []
+    var predictionDataZT: [ShareGlucoseData] = []
+    var predictionDataUAM: [ShareGlucoseData] = []
+    var predictionDataCOB: [ShareGlucoseData] = []
+    var predictionDataIOB: [ShareGlucoseData] = []
     var bgCheckData: [ShareGlucoseData] = []
     var suspendGraphData: [DataStructs.timestampOnlyStruct] = []
     var resumeGraphData: [DataStructs.timestampOnlyStruct] = []
@@ -153,8 +156,6 @@ class MainViewController: UIViewController, UITableViewDataSource, ChartViewDele
         UserDefaultsRepository.infoNames.value.append("Pump")
         UserDefaultsRepository.infoNames.value.append("SAGE")
         UserDefaultsRepository.infoNames.value.append("CAGE")
-        UserDefaultsRepository.infoNames.value.append("Rec. Bolus")
-        UserDefaultsRepository.infoNames.value.append("Pred.")
  
         // table view
         //infoTable.layer.borderColor = UIColor.darkGray.cgColor
@@ -168,9 +169,9 @@ class MainViewController: UIViewController, UITableViewDataSource, ChartViewDele
         
         // initialize the tableData
         self.tableData = []
-        for i in 0..<UserDefaultsRepository.infoNames.value.count {
-            self.tableData.append(infoData(name:UserDefaultsRepository.infoNames.value[i], value:""))
-        }
+        //for i in 0..<UserDefaultsRepository.infoNames.value.count {
+        //    self.tableData.append(infoData(name:UserDefaultsRepository.infoNames.value[i], value:""))
+        //}
         createDerivedData()
         
         smallGraphHeightConstraint.constant = CGFloat(UserDefaultsRepository.smallGraphHeight.value)
@@ -306,13 +307,13 @@ class MainViewController: UIViewController, UITableViewDataSource, ChartViewDele
     // Info Table Functions
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         //return tableData.count
-        return derivedTableData.count
+        return tableData.count
         
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "LabelCell", for: indexPath)
-        let values = derivedTableData[indexPath.row]
+        let values = tableData[indexPath.row]
         cell.textLabel?.text = values.name
         cell.detailTextLabel?.text = values.value
         return cell
@@ -372,7 +373,7 @@ class MainViewController: UIViewController, UITableViewDataSource, ChartViewDele
     
     //Clear the info data before next pull. This ensures we aren't displaying old data if something fails.
     func clearLastInfoData(index: Int){
-        tableData[index].value = ""
+        //tableData[index].value = ""
     }
 
     func stringFromTimeInterval(interval: TimeInterval) -> String {

@@ -11,6 +11,24 @@ import Charts
 import UIKit
 
 let ScaleXMax:Float = 150.0
+extension UIColor {
+   convenience init(red: Int, green: Int, blue: Int) {
+       assert(red >= 0 && red <= 255, "Invalid red component")
+       assert(green >= 0 && green <= 255, "Invalid green component")
+       assert(blue >= 0 && blue <= 255, "Invalid blue component")
+
+       self.init(red: CGFloat(red) / 255.0, green: CGFloat(green) / 255.0, blue: CGFloat(blue) / 255.0, alpha: 1.0)
+   }
+
+   convenience init(rgb: Int) {
+       self.init(
+           red: (rgb >> 16) & 0xFF,
+           green: (rgb >> 8) & 0xFF,
+           blue: rgb & 0xFF
+       )
+   }
+}
+
 extension MainViewController {
     
     func chartValueSelected(_ chartView: ChartViewBase, entry: ChartDataEntry, highlight: Highlight) {
@@ -34,6 +52,29 @@ extension MainViewController {
         UserDefaultsRepository.chartScaleX.value = Float(scale)
     }
 
+    fileprivate func setupPredictionLine(_ linePrediction: LineChartDataSet, color: NSUIColor) {
+        linePrediction.circleRadius = CGFloat(globalVariables.dotBG)
+        linePrediction.circleColors = [color]
+        linePrediction.colors = [color]
+        linePrediction.drawCircleHoleEnabled = false
+        linePrediction.axisDependency = YAxis.AxisDependency.right
+        linePrediction.highlightEnabled = true
+        linePrediction.drawValuesEnabled = false
+        
+        if UserDefaultsRepository.showLines.value {
+            linePrediction.lineWidth = 2
+        } else {
+            linePrediction.lineWidth = 0
+        }
+        if UserDefaultsRepository.showDots.value {
+            linePrediction.drawCirclesEnabled = true
+        } else {
+            linePrediction.drawCirclesEnabled = false
+        }
+        linePrediction.setDrawHighlightIndicators(false)
+        linePrediction.valueFont.withSize(50)
+    }
+    
     func createGraph(){
         self.BGChart.clear()
         
@@ -68,29 +109,8 @@ extension MainViewController {
         // Setup Prediction line details
         var predictionChartEntry = [ChartDataEntry]()
         let linePrediction = LineChartDataSet(entries:predictionChartEntry, label: "")
-        linePrediction.circleRadius = CGFloat(globalVariables.dotBG)
-        linePrediction.circleColors = [NSUIColor.systemPurple]
-        linePrediction.colors = [NSUIColor.systemPurple]
-        linePrediction.drawCircleHoleEnabled = false
-        linePrediction.axisDependency = YAxis.AxisDependency.right
-        linePrediction.highlightEnabled = true
-        linePrediction.drawValuesEnabled = false
+        setupPredictionLine(linePrediction, color: NSUIColor.systemPurple)
         
-        if UserDefaultsRepository.showLines.value {
-            linePrediction.lineWidth = 2
-        } else {
-            linePrediction.lineWidth = 0
-        }
-        if UserDefaultsRepository.showDots.value {
-            linePrediction.drawCirclesEnabled = true
-        } else {
-            linePrediction.drawCirclesEnabled = false
-        }
-        linePrediction.setDrawHighlightIndicators(false)
-        linePrediction.valueFont.withSize(50)
-        
-        
-
         // create Basal graph data
         var chartEntry = [ChartDataEntry]()
         var maxBasal = UserDefaultsRepository.minBasalScale.value
@@ -267,6 +287,24 @@ extension MainViewController {
         lineNote.valueFormatter = ChartYDataValueFormatter()
         lineNote.drawValuesEnabled = false
         
+        var predictionCOBChartEntry = [ChartDataEntry]()
+        let linePredictionCOB = LineChartDataSet(entries:predictionCOBChartEntry, label: "")
+        setupPredictionLine(linePredictionCOB, color: NSUIColor.systemPurple)
+        
+        var predictionIOBChartEntry = [ChartDataEntry]()
+        let linePredictionIOB = LineChartDataSet(entries:predictionIOBChartEntry, label: "")
+        setupPredictionLine(linePredictionIOB, color: NSUIColor.systemBlue)
+        
+        
+        var predictionZTChartEntry = [ChartDataEntry]()
+        let linePredictionZT = LineChartDataSet(entries:predictionZTChartEntry, label: "")
+        setupPredictionLine(linePredictionZT, color: NSUIColor.systemYellow)
+        
+        
+        var predictionUAMChartEntry = [ChartDataEntry]()
+        let linePredictionUAM = LineChartDataSet(entries:predictionUAMChartEntry, label: "")
+        setupPredictionLine(linePredictionUAM, color: NSUIColor.systemOrange)
+        
         // Setup the chart data of all lines
         let data = LineChartData()
         data.addDataSet(lineBG) // Dataset 0
@@ -281,7 +319,11 @@ extension MainViewController {
         data.addDataSet(lineResume) // Dataset 9
         data.addDataSet(lineSensor) // Dataset 10
         data.addDataSet(lineNote) // Dataset 11
-        
+        data.addDataSet(linePredictionCOB) // Dataset 12
+        data.addDataSet(linePredictionIOB) // Dataset 13
+        data.addDataSet(linePredictionZT) // Dataset 14
+        data.addDataSet(linePredictionUAM) // Dataset 15
+
         data.setValueFont(UIFont.systemFont(ofSize: 12))
         
         // Add marker popups for bolus and carbs
@@ -526,27 +568,18 @@ extension MainViewController {
         BGChart.moveViewToAnimated(xValue: dateTimeUtils.getNowTimeIntervalUTC() - (BGChart.visibleXRange * 0.7), yValue: 0.0, axis: .right, duration: 1, easingOption: .easeInBack)
     }
     
-    func updatePredictionGraph() {
-        let dataIndex = 1
-        var mainChart = BGChart.lineData!.dataSets[dataIndex] as! LineChartDataSet
-        var smallChart = BGChartFull.lineData!.dataSets[dataIndex] as! LineChartDataSet
-        mainChart.clear()
-        smallChart.clear()
-        if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "Graph: print prediction") }
-
-        var colors = [NSUIColor]()
-        let maxBGOffset: Float = 20
+    fileprivate func updatePredictionsFor(_ maxBGOffset: Float, _ colors: inout [UIColor], _ mainChart: LineChartDataSet, _ smallChart: LineChartDataSet, predictionData: [ShareGlucoseData], color: NSUIColor) {
         for i in 0..<predictionData.count {
             var predictionVal = Double(predictionData[i].sgv)
             if Float(predictionVal) > topBG - maxBGOffset {
                 topBG = Float(predictionVal) + maxBGOffset
             }
-
+            
             if i == 0 {
                 if UserDefaultsRepository.showDots.value {
-                    colors.append(NSUIColor.systemPurple.withAlphaComponent(0.0))
+                    colors.append(color.withAlphaComponent(0.0))
                 } else {
-                    colors.append(NSUIColor.systemPurple.withAlphaComponent(1.0))
+                    colors.append(color.withAlphaComponent(1.0))
                 }
                 
             } else if predictionVal > 400 {
@@ -556,12 +589,25 @@ extension MainViewController {
                 predictionVal = 0
                 colors.append(NSUIColor.systemRed)
             } else {
-                colors.append(NSUIColor.systemPurple)
+                colors.append(color)
             }
             let value = ChartDataEntry(x: predictionData[i].date, y: predictionVal, data: formatPillText(line1: bgUnits.toDisplayUnits(String(predictionData[i].sgv)), time: predictionData[i].date))
             mainChart.addEntry(value)
             smallChart.addEntry(value)
         }
+    }
+    
+    fileprivate func updatePredChart(_ dataIndex: Int, predictionData: [ShareGlucoseData], color: NSUIColor) {
+        let mainChart = BGChart.lineData!.dataSets[dataIndex] as! LineChartDataSet
+        let smallChart = BGChartFull.lineData!.dataSets[dataIndex] as! LineChartDataSet
+        
+        mainChart.clear()
+        smallChart.clear()
+        if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "Graph: print prediction") }
+        
+        var colors = [NSUIColor]()
+        let maxBGOffset: Float = 20
+        updatePredictionsFor(maxBGOffset, &colors, mainChart, smallChart, predictionData: predictionData, color: color)
         
         smallChart.circleColors.removeAll()
         smallChart.colors.removeAll()
@@ -583,6 +629,13 @@ extension MainViewController {
         BGChartFull.data?.dataSets[dataIndex].notifyDataSetChanged()
         BGChartFull.data?.notifyDataChanged()
         BGChartFull.notifyDataSetChanged()
+    }
+    
+    func updatePredictionGraph() {
+        updatePredChart(12, predictionData: predictionDataCOB, color: UIColor(rgb: 0xFB8C00))
+        updatePredChart(13, predictionData: predictionDataIOB, color: UIColor(rgb: 0x1e88e5))
+        updatePredChart(14, predictionData: predictionDataZT, color: UIColor(rgb: 0x00d2d2))
+        updatePredChart(15, predictionData: predictionDataUAM, color: UIColor(rgb: 0xc9bd60))
     }
     
     func updateBasalGraph() {
@@ -943,6 +996,19 @@ extension MainViewController {
         }
     }
  
+    fileprivate func setupPredictionLine2(_ linePrediction: LineChartDataSet, color: NSUIColor) {
+        linePrediction.drawCirclesEnabled = false
+        //line2.setDrawHighlightIndicators(false)
+        linePrediction.setColor(color)
+        linePrediction.highlightEnabled = true
+        linePrediction.drawHorizontalHighlightIndicatorEnabled = false
+        linePrediction.drawVerticalHighlightIndicatorEnabled = false
+        linePrediction.highlightColor = NSUIColor.label
+        linePrediction.drawValuesEnabled = false
+        linePrediction.lineWidth = 1.5
+        linePrediction.axisDependency = YAxis.AxisDependency.right
+    }
+    
     func createSmallBGGraph(){
         let entries = bgData
        var bgChartEntry = [ChartDataEntry]()
@@ -964,16 +1030,7 @@ extension MainViewController {
         // Setup Prediction line details
         var predictionChartEntry = [ChartDataEntry]()
         let linePrediction = LineChartDataSet(entries:predictionChartEntry, label: "")
-        linePrediction.drawCirclesEnabled = false
-        //line2.setDrawHighlightIndicators(false)
-        linePrediction.setColor(NSUIColor.systemPurple)
-        linePrediction.highlightEnabled = true
-        linePrediction.drawHorizontalHighlightIndicatorEnabled = false
-        linePrediction.drawVerticalHighlightIndicatorEnabled = false
-        linePrediction.highlightColor = NSUIColor.label
-        linePrediction.drawValuesEnabled = false
-        linePrediction.lineWidth = 1.5
-        linePrediction.axisDependency = YAxis.AxisDependency.right
+        setupPredictionLine2(linePrediction, color: NSUIColor.systemPurple)
         
         // create Basal graph data
         var chartEntry = [ChartDataEntry]()
@@ -1135,6 +1192,24 @@ extension MainViewController {
         lineNote.valueFormatter = ChartYDataValueFormatter()
         lineNote.drawValuesEnabled = false
         
+        let predictionCOBChartEntry = [ChartDataEntry]()
+        let linePredictionCOB = LineChartDataSet(entries:predictionCOBChartEntry, label: "")
+        setupPredictionLine2(linePredictionCOB, color: NSUIColor.systemPurple)
+        
+        let predictionIOBChartEntry = [ChartDataEntry]()
+        let linePredictionIOB = LineChartDataSet(entries:predictionIOBChartEntry, label: "")
+        setupPredictionLine2(linePredictionIOB, color: UIColor(rgb: 0x1e88e5))
+        
+        
+        let predictionZTChartEntry = [ChartDataEntry]()
+        let linePredictionZT = LineChartDataSet(entries:predictionZTChartEntry, label: "")
+        setupPredictionLine2(linePredictionZT, color: NSUIColor.systemYellow)
+        
+        
+        let predictionUAMChartEntry = [ChartDataEntry]()
+        let linePredictionUAM = LineChartDataSet(entries:predictionUAMChartEntry, label: "")
+        setupPredictionLine2(linePredictionUAM, color: NSUIColor.systemOrange)
+        
         // Setup the chart data of all lines
         let data = LineChartData()
         data.addDataSet(lineBG) // Dataset 0
@@ -1149,6 +1224,10 @@ extension MainViewController {
         data.addDataSet(lineResume) // Dataset 9
         data.addDataSet(lineSensor) // Dataset 10
         data.addDataSet(lineNote) // Dataset 11
+        data.addDataSet(linePredictionCOB) // Dataset 12
+        data.addDataSet(linePredictionIOB) // Dataset 13
+        data.addDataSet(linePredictionZT) // Dataset 14
+        data.addDataSet(linePredictionUAM) // Dataset 15
         
         BGChartFull.highlightPerDragEnabled = true
         BGChartFull.leftAxis.enabled = false
