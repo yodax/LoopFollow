@@ -918,7 +918,7 @@ extension MainViewController {
             return
         }
         if jsonDeviceStatus[keyPath: "message"] != nil { return }
-        let basal = try jsonDeviceStatus[keyPath: "store.Default.basal"] as! NSArray
+        let basal = try jsonDeviceStatus[keyPath: "store.FreeAPS X.basal"] as! NSArray
         basalProfile.removeAll()
         for i in 0..<basal.count {
             let dict = basal[i] as! Dictionary<String, Any>
