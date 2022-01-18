@@ -903,28 +903,59 @@ extension MainViewController {
     }
     
     // NS Profile Response Processor
+    fileprivate func extractBasal(_ jsonDeviceStatus: [String : Any]) throws -> NSArray {
+        let store = try jsonDeviceStatus[keyPath: "store"] as! NSDictionary
+        
+        for (key, value) in store
+        {
+            if let profile = value as? NSDictionary
+            {
+                let basal = profile["basal"] as! NSArray
+                return basal
+            }
+        }
+        
+        return NSArray()
+    }
+    
     func updateProfile(jsonDeviceStatus: Dictionary<String, Any>) {
         if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "Process: profile") }
         if jsonDeviceStatus.count == 0 {
             return
         }
         if jsonDeviceStatus[keyPath: "message"] != nil { return }
-        let basal = try jsonDeviceStatus[keyPath: "store.FreeAPS X.basal"] as! NSArray
-        basalProfile.removeAll()
-        for i in 0..<basal.count {
-            let dict = basal[i] as! Dictionary<String, Any>
-            do {
-                let thisValue = try dict[keyPath: "value"] as! Double
-                let thisTime = dict[keyPath: "time"] as! String
-                let thisTimeAsSeconds = dict[keyPath: "timeAsSeconds"] as! Double
-                let entry = basalProfileStruct(value: thisValue, time: thisTime, timeAsSeconds: thisTimeAsSeconds)
-                basalProfile.append(entry)
-            } catch {
-               if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "ERROR: profile wrapped in quotes") }
+        do {
+            
+            let basal = try extractBasal(jsonDeviceStatus)
+            
+            basalProfile.removeAll()
+            for i in 0..<basal.count {
+                let dict = basal[i] as! Dictionary<String, Any>
+                do {
+                    let thisValue = try dict[keyPath: "value"] as! Double
+                    let thisTime = dict[keyPath: "time"] as! String
+                    if let thisTimeAsSeconds = dict[keyPath: "timeAsSeconds"] as! Double? {
+                        let entry = basalProfileStruct(value: thisValue, time: thisTime, timeAsSeconds: thisTimeAsSeconds)
+                        basalProfile.append(entry)
+                    }
+                    else
+                    {
+                        let splitTime = thisTime.split(separator: ":")
+                        let dateComponents = DateComponents(hour: Int.init(string: String(splitTime[0])), minute: Int.init(string: String(splitTime[1])))
+                        let thisTimeAsSeconds = (dateComponents.hour! * 60 + dateComponents.minute!) * 60
+                        let entry = basalProfileStruct(value: thisValue, time: thisTime, timeAsSeconds: Double(thisTimeAsSeconds))
+                        basalProfile.append(entry)
+                    }
+                    
+                    
+                    
+                } catch {
+                   if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "ERROR: profile wrapped in quotes") }
+                }
             }
+        } catch {
+            if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "ERROR: profile can't be loaded") }
         }
-        
-        
         // Don't process the basal or draw the graph until after the BG has been fully processeed and drawn
         if firstGraphLoad { return }
 
