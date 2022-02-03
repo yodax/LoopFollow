@@ -537,6 +537,9 @@ extension MainViewController {
                         }
                     }
                     if wasEnacted {
+                        if let sensRatio = lastLoopRecord["suggested"]?["sensitivityRatio"] as? Double {
+                            tableData.append(infoData(name: "Autosens ratio", value: String(format: "%.2f", sensRatio)))
+                        }
                         if let iobdata = lastLoopRecord["enacted"]?["IOB"] as? Double {
                             //tableData[0].value = String(format:"%.2f", (iobdata))
                             tableData.append(infoData(name: "IOB", value: String(format: "%.2f", iobdata)))
