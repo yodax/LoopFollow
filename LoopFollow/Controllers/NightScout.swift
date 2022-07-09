@@ -518,153 +518,155 @@ extension MainViewController {
         }
         
         // Loop
-        if let lastLoopRecord = lastDeviceStatus?["openaps"] as! [String : AnyObject]? {
+        if let lastLoopRecord = lastDeviceStatus?["openaps"] as? [String : AnyObject] {
             //print("Loop: \(lastLoopRecord)")
-            if let lastLoopTime = formatter.date(from: (lastLoopRecord["suggested"]?["timestamp"] as! String))?.timeIntervalSince1970  {
-                UserDefaultsRepository.alertLastLoopTime.value = lastLoopTime
-                if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "lastLoopTime: " + String(lastLoopTime)) }
-                if let failure = lastLoopRecord["failureReason"] {
-                    LoopStatusLabel.text = "X"
-                    latestLoopStatusString = "X"
-                    if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "Loop Failure: X") }
-                } else {
-                    var wasEnacted = false
-                    if let enacted = lastLoopRecord["enacted"] as? [String:AnyObject] {
-                        if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "Loop: Was Enacted") }
-                        wasEnacted = true
-                        if let lastTempBasal = enacted["rate"] as? Double {
+            if let lastLoopTimeStamp = lastLoopRecord["suggested"]?["timestamp"] as? String  {
+                if let lastLoopTime = formatter.date(from: lastLoopTimeStamp)?.timeIntervalSince1970  {
+                    UserDefaultsRepository.alertLastLoopTime.value = lastLoopTime
+                    if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "lastLoopTime: " + String(lastLoopTime)) }
+                    if lastLoopRecord["failureReason"] != nil {
+                        LoopStatusLabel.text = "X"
+                        latestLoopStatusString = "X"
+                        if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "Loop Failure: X") }
+                    } else {
+                        var wasEnacted = false
+                        if let enacted = lastLoopRecord["suggested"] as? [String:AnyObject] {
+                            if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "Loop: Was Enacted") }
+                            wasEnacted = true
+                            if enacted["rate"] is Double {
 
+                            }
                         }
-                    }
-                    if wasEnacted {
-                        if let sensRatio = lastLoopRecord["suggested"]?["sensitivityRatio"] as? Double {
-                            tableData.append(infoData(name: "Autosens ratio", value: String(format: "%.2f", sensRatio)))
-                        }
-                        if let iobdata = lastLoopRecord["enacted"]?["IOB"] as? Double {
-                            //tableData[0].value = String(format:"%.2f", (iobdata))
-                            tableData.append(infoData(name: "IOB", value: String(format: "%.2f", iobdata)))
-                            latestIOB = String(format:"%.2f", (iobdata))
-                        }
-                        if let cobdata = lastLoopRecord["enacted"]?["COB"] as? Int64 {
-                            //tableData[1].value = String(cobdata)
-                            latestCOB = String(cobdata)
-                        }
-                    
-                        if let predictdata = lastLoopRecord["enacted"]?["predBGs"] as? [String:AnyObject] {
-                            if let prediction = predictdata["IOB"] as? [Int] {
-                                //PredictionLabel.text = bgUnits.toDisplayUnits(String(Int(prediction.last!)))
-                                //PredictionLabel.textColor = UIColor.systemPurple
+                        if wasEnacted {
+                            if let sensRatio = lastLoopRecord["suggested"]?["sensitivityRatio"] as? Double {
+                                tableData.append(infoData(name: "Autosens ratio", value: String(format: "%.2f", sensRatio)))
+                            }
+                            if let iobdata = lastLoopRecord["suggested"]?["IOB"] as? Double {
+                                //tableData[0].value = String(format:"%.2f", (iobdata))
+                                tableData.append(infoData(name: "IOB", value: String(format: "%.2f", iobdata)))
+                                latestIOB = String(format:"%.2f", (iobdata))
+                            }
+                            if let cobdata = lastLoopRecord["suggested"]?["COB"] as? Int64 {
+                                //tableData[1].value = String(cobdata)
+                                latestCOB = String(cobdata)
+                            }
+                        
+                            if let predictdata = lastLoopRecord["suggested"]?["predBGs"] as? [String:AnyObject] {
+                                if let prediction = predictdata["IOB"] as? [Int] {
+                                    //PredictionLabel.text = bgUnits.toDisplayUnits(String(Int(prediction.last!)))
+                                    //PredictionLabel.textColor = UIColor.systemPurple
+                                    
+                                    processPredictionFor(lastLoopTime, prediction, graphData: &predictionDataIOB)
+                                }
                                 
-                                processPredictionFor(lastLoopTime, prediction, graphData: &predictionDataIOB)
+                                if let prediction = predictdata["ZT"] as? [Int] {
+                                    processPredictionFor(lastLoopTime, prediction, graphData: &predictionDataZT)}
+                                
+                                if let prediction = predictdata["COB"] as? [Int] {
+                                    processPredictionFor(lastLoopTime, prediction, graphData: &predictionDataCOB)}
+                                else
+                                {
+                                    predictionDataCOB.removeAll()
+                                }
+                                
+                                if let prediction = predictdata["UAM"] as? [Int] {
+                                    processPredictionFor(lastLoopTime, prediction, graphData: &predictionDataUAM)}
+                                else
+                                {
+                                    predictionDataUAM.removeAll()
+                                }
+                                
+                                updatePredictionGraph()
                             }
                             
-                            if let prediction = predictdata["ZT"] as? [Int] {
-                                processPredictionFor(lastLoopTime, prediction, graphData: &predictionDataZT)}
-                            
-                            if let prediction = predictdata["COB"] as? [Int] {
-                                processPredictionFor(lastLoopTime, prediction, graphData: &predictionDataCOB)}
-                            else
-                            {
-                                predictionDataCOB.removeAll()
+                            if let rate = lastLoopRecord["suggested"]?["rate"] as? Double {
+                                tableData.append(infoData(name: "Basal", value: String(format: "%.2f", rate) + " U/hr"))
                             }
                             
-                            if let prediction = predictdata["UAM"] as? [Int] {
-                                processPredictionFor(lastLoopTime, prediction, graphData: &predictionDataUAM)}
-                            else
-                            {
-                                predictionDataUAM.removeAll()
-                            }
-                            
-                            updatePredictionGraph()
-                        }
-                        
-                        if let rate = lastLoopRecord["enacted"]?["rate"] as? Double {
-                            tableData.append(infoData(name: "Basal", value: String(format: "%.2f", rate) + " U/hr"))
-                        }
-                        
-                        if let reason = lastLoopRecord["enacted"]?["reason"] as? String {
-                            //ReasonLabel.text = reason
-                            let splitReasons = reason.replacingOccurrences(of: "&lt;", with: "<").replacingOccurrences(of: "&gt;", with: ">").split(separator: ";")
-                            for semicolonSplitReason in splitReasons {
-                                let reasons = semicolonSplitReason.split(separator: ",")
-                                for r in reasons {
-                                    var cleanR = r.trimmingCharacters(in: NSCharacterSet.whitespaces)
-                                    
-                                    //cleanR = cleanR.replacingOccurrences(of: "&lt;", with: "<")
-                                    //cleanR = cleanR.replacingOccurrences(of: "&gt;", with: ">")
-                                    
-                                    if (cleanR.contains(":"))
-                                    {
-                                        let splitReason = cleanR.split(separator: ":")
-                                        tableData.append(infoData(name: String(splitReason[0]).trimmingCharacters(in: NSCharacterSet.whitespaces), value: String(splitReason[1])))
-                                    }
-                                    else if (cleanR.starts(with: "IOBpredBG"))
-                                    {
-                                        tableData.append(infoData(name: "IOB pred BG", value: cleanR.replacingOccurrences(of: "IOBpredBG", with: "")))
-                                    }
-                                    else if (r.starts(with: "COBpredBG"))
-                                    {
-                                        tableData.append(infoData(name: "COBpredBG", value: cleanR.replacingOccurrences(of: "COBpredBG", with: "")))
-                                    }
-                                    else if (cleanR.starts(with: "insulinReq"))
-                                    {
-                                        tableData.append(infoData(name: "insulinReq", value: cleanR.replacingOccurrences(of: "insulinReq", with: "")))
-                                    }
-                                    else if (cleanR.starts(with: "Eventual BG"))
-                                    {
-                                        tableData.append(infoData(name: "Eventual BG", value: cleanR.replacingOccurrences(of: "Eventual BG ", with: "")))
-                                    }
-                                    else if (cleanR.starts(with: "temp"))
-                                    {
-                                        tableData.append(infoData(name: "temp", value: cleanR.replacingOccurrences(of: "temp ", with: "")))
-                                    }
-                                    else if (cleanR.filter { $0 == " " }.count == 1)
-                                    {
-                                        let splitReason = cleanR.split(separator: " ")
-                                        tableData.append(infoData(name: String(splitReason[0]).trimmingCharacters(in: NSCharacterSet.whitespaces), value: String(splitReason[1])))
-                                    }
-                                    else
-                                    {
-                                        tableData.append(infoData(name: "", value: cleanR))
+                            if let reason = lastLoopRecord["suggested"]?["reason"] as? String {
+                                //ReasonLabel.text = reason
+                                let splitReasons = reason.replacingOccurrences(of: "&lt;", with: "<").replacingOccurrences(of: "&gt;", with: ">").split(separator: ";")
+                                for semicolonSplitReason in splitReasons {
+                                    let reasons = semicolonSplitReason.split(separator: ",")
+                                    for r in reasons {
+                                        var cleanR = r.trimmingCharacters(in: NSCharacterSet.whitespaces)
+                                        
+                                        //cleanR = cleanR.replacingOccurrences(of: "&lt;", with: "<")
+                                        //cleanR = cleanR.replacingOccurrences(of: "&gt;", with: ">")
+                                        
+                                        if (cleanR.contains(":"))
+                                        {
+                                            let splitReason = cleanR.split(separator: ":")
+                                            tableData.append(infoData(name: String(splitReason[0]).trimmingCharacters(in: NSCharacterSet.whitespaces), value: String(splitReason[1])))
+                                        }
+                                        else if (cleanR.starts(with: "IOBpredBG"))
+                                        {
+                                            tableData.append(infoData(name: "IOB pred BG", value: cleanR.replacingOccurrences(of: "IOBpredBG", with: "")))
+                                        }
+                                        else if (r.starts(with: "COBpredBG"))
+                                        {
+                                            tableData.append(infoData(name: "COBpredBG", value: cleanR.replacingOccurrences(of: "COBpredBG", with: "")))
+                                        }
+                                        else if (cleanR.starts(with: "insulinReq"))
+                                        {
+                                            tableData.append(infoData(name: "insulinReq", value: cleanR.replacingOccurrences(of: "insulinReq", with: "")))
+                                        }
+                                        else if (cleanR.starts(with: "Eventual BG"))
+                                        {
+                                            tableData.append(infoData(name: "Eventual BG", value: cleanR.replacingOccurrences(of: "Eventual BG ", with: "")))
+                                        }
+                                        else if (cleanR.starts(with: "temp"))
+                                        {
+                                            tableData.append(infoData(name: "temp", value: cleanR.replacingOccurrences(of: "temp ", with: "")))
+                                        }
+                                        else if (cleanR.filter { $0 == " " }.count == 1)
+                                        {
+                                            let splitReason = cleanR.split(separator: " ")
+                                            tableData.append(infoData(name: String(splitReason[0]).trimmingCharacters(in: NSCharacterSet.whitespaces), value: String(splitReason[1])))
+                                        }
+                                        else
+                                        {
+                                            tableData.append(infoData(name: "", value: cleanR))
+                                        }
                                     }
                                 }
-                            }
-                            
-                        }
-                    }
-                    if let loopStatus = lastLoopRecord["recommendedTempBasal"] as? [String:AnyObject] {
-                        if let tempBasalTime = formatter.date(from: (loopStatus["timestamp"] as! String))?.timeIntervalSince1970 {
-                            var lastBGTime = lastLoopTime
-                            if bgData.count > 0 {
-                                lastBGTime = bgData[bgData.count - 1].date
-                            }
-                            if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "tempBasalTime: " + String(tempBasalTime)) }
-                            if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "lastBGTime: " + String(lastBGTime)) }
-                            if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "wasEnacted: " + String(wasEnacted)) }
-                            if tempBasalTime > lastBGTime && !wasEnacted {
-                                LoopStatusLabel.text = "⏀"
-                                latestLoopStatusString = "⏀"
-                                if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "Open Loop: recommended temp. temp time > bg time, was not enacted") }
-                            } else {
-                                LoopStatusLabel.text = "↻"
-                                latestLoopStatusString = "↻"
-                                if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "Looping: recommended temp, but temp time is < bg time and/or was enacted") }
+                                
                             }
                         }
-                    } else {
-                        LoopStatusLabel.text = "↻"
-                        latestLoopStatusString = "↻"
-                        if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "Looping: no recommended temp") }
+                        if let loopStatus = lastLoopRecord["recommendedTempBasal"] as? [String:AnyObject] {
+                            if let tempBasalTime = formatter.date(from: (loopStatus["timestamp"] as! String))?.timeIntervalSince1970 {
+                                var lastBGTime = lastLoopTime
+                                if bgData.count > 0 {
+                                    lastBGTime = bgData[bgData.count - 1].date
+                                }
+                                if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "tempBasalTime: " + String(tempBasalTime)) }
+                                if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "lastBGTime: " + String(lastBGTime)) }
+                                if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "wasEnacted: " + String(wasEnacted)) }
+                                if tempBasalTime > lastBGTime && !wasEnacted {
+                                    LoopStatusLabel.text = "⏀"
+                                    latestLoopStatusString = "⏀"
+                                    if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "Open Loop: recommended temp. temp time > bg time, was not enacted") }
+                                } else {
+                                    LoopStatusLabel.text = "↻"
+                                    latestLoopStatusString = "↻"
+                                    if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "Looping: recommended temp, but temp time is < bg time and/or was enacted") }
+                                }
+                            }
+                        } else {
+                            LoopStatusLabel.text = "↻"
+                            latestLoopStatusString = "↻"
+                            if UserDefaultsRepository.debugLog.value { self.writeDebugLog(value: "Looping: no recommended temp") }
+                        }
+                        
                     }
                     
-                }
-                
-                if ((TimeInterval(Date().timeIntervalSince1970) - lastLoopTime) / 60) > 15 {
-                    LoopStatusLabel.text = "⚠"
-                    latestLoopStatusString = "⚠"
-                }
-                latestLoopTime = lastLoopTime
-            } // end lastLoopTime
+                    if ((TimeInterval(Date().timeIntervalSince1970) - lastLoopTime) / 60) > 15 {
+                        LoopStatusLabel.text = "⚠"
+                        latestLoopStatusString = "⚠"
+                    }
+                    latestLoopTime = lastLoopTime
+                } // end lastLoopTime
+            }
         } // end lastLoop Record
         
         var oText = "" as String
@@ -1109,6 +1111,10 @@ extension MainViewController {
         
         for i in 0..<entries.count {
             let entry = entries[i] as [String : AnyObject]?
+            if !(entry?["isValid"] as! Bool) {
+                continue
+            }
+            
             switch entry?["eventType"] as! String {
                 case "Temp Basal":
                     tempBasal.append(entry!)
@@ -1118,6 +1124,7 @@ extension MainViewController {
                     bolus.append(entry!)
                 case "Meal Bolus":
                     carbs.append(entry!)
+                    bolus.append(entry!)
                 case "Carb Correction":
                     carbs.append(entry!)
                 case "Temporary Override":
