@@ -298,7 +298,7 @@ class MainViewController: UIViewController, UITableViewDataSource, ChartViewDele
         
         self.derivedTableData = []
         for i in 0..<self.tableData.count {
-            if(UserDefaultsRepository.infoVisible.value[UserDefaultsRepository.infoSort.value[i]]) {
+            if(UserDefaultsRepository.infoSort.key.count > i && UserDefaultsRepository.infoVisible.value[UserDefaultsRepository.infoSort.value[i]]) {
                 self.derivedTableData.append(self.tableData[UserDefaultsRepository.infoSort.value[i]])
             }
         }

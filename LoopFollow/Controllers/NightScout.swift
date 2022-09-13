@@ -1111,7 +1111,7 @@ extension MainViewController {
         
         for i in 0..<entries.count {
             let entry = entries[i] as [String : AnyObject]?
-            if !(entry?["isValid"] as! Bool) {
+            if !(entry?["isValid"] as? Bool ?? true) {
                 continue
             }
             
@@ -1281,10 +1281,10 @@ extension MainViewController {
         for i in 0..<tempArray.count {
             let currentEntry = tempArray[i] as [String : AnyObject]?
             var basalDate: String
-            if currentEntry?["timestamp"] != nil {
-                basalDate = currentEntry?["timestamp"] as! String
-            } else if currentEntry?["created_at"] != nil {
+            if currentEntry?["created_at"] != nil {
                 basalDate = currentEntry?["created_at"] as! String
+            } else if currentEntry?["timestamp"] != nil {
+                basalDate = currentEntry?["timestamp"] as! String
             } else {
                 continue
             }
@@ -1314,10 +1314,10 @@ extension MainViewController {
             if i > 0 {
                 let priorEntry = tempArray[i - 1] as [String : AnyObject]?
                 var priorBasalDate: String
-                if priorEntry?["timestamp"] != nil {
-                    priorBasalDate = priorEntry?["timestamp"] as! String
-                } else if currentEntry?["created_at"] != nil {
+                if currentEntry?["created_at"] != nil {
                     priorBasalDate = priorEntry?["created_at"] as! String
+                } else if priorEntry?["timestamp"] != nil {
+                    priorBasalDate = priorEntry?["timestamp"] as! String
                 } else {
                     continue
                 }
@@ -1405,10 +1405,10 @@ extension MainViewController {
             if i < tempArray.count - 1 {
                 let nextEntry = tempArray[i + 1] as [String : AnyObject]?
                 var nextBasalDate: String
-                if nextEntry?["timestamp"] != nil {
-                    nextBasalDate = nextEntry?["timestamp"] as! String
-                } else if currentEntry?["created_at"] != nil {
+                if currentEntry?["created_at"] != nil {
                     nextBasalDate = nextEntry?["created_at"] as! String
+                } else if nextEntry?["timestamp"] != nil {
+                    nextBasalDate = nextEntry?["timestamp"] as! String
                 } else {
                     continue
                 }

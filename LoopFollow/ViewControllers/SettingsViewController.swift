@@ -187,17 +187,17 @@ class SettingsViewController: FormViewController {
                }
            ), onDismiss: nil)
         }
-        <<< ButtonRow("informationDisplaySettings") {
-           $0.title = "Information Display Settings"
-           $0.presentationMode = .show(
-               controllerProvider: .callback(builder: {
-                  let controller = InfoDisplaySettingsViewController()
-                  controller.appStateController = self.appStateController
-                  return controller
-               }
-           ), onDismiss: nil)
+//        <<< ButtonRow("informationDisplaySettings") {
+//           $0.title = "Information Display Settings"
+//           $0.presentationMode = .show(
+//               controllerProvider: .callback(builder: {
+//                  let controller = InfoDisplaySettingsViewController()
+//                  controller.appStateController = self.appStateController
+//                  return controller
+//               }
+//           ), onDismiss: nil)
             
-        }
+//        }
         
         +++ Section("Integrations")
         <<< ButtonRow() {
