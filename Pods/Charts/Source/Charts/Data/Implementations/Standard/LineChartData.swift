@@ -28,4 +28,9 @@ open class LineChartData: ChartData
     {
         super.init(dataSets: elements)
     }
+    
+    public func addDataSet(dataSet: LineChartDataSet)
+    {
+        super.dataSets.append(dataSet)
+    }
 }

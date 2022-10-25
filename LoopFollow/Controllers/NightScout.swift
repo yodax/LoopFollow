@@ -499,20 +499,37 @@ extension MainViewController {
                                    .withDashSeparatorInDate,
                                    .withColonSeparatorInTime]
         if let lastPumpRecord = lastDeviceStatus?["pump"] as! [String : AnyObject]? {
-            if let lastPumpTime = formatter.date(from: (lastPumpRecord["clock"] as! String))?.timeIntervalSince1970  {
-                if let reservoirData = lastPumpRecord["reservoir"] as? Double {
-                    latestPumpVolume = reservoirData
-                    //tableData[5].value = String(format:"%.0f", reservoirData) + "U"
-                    tableData.append(infoData(name: "Reservoir", value: String(format:"%.0f", reservoirData) + "U"))
-                } else {
-                    latestPumpVolume = 50.0
-                    //tableData[5].value = "50+U"
-                    tableData.append(infoData(name: "Reservoir", value: String(format:"%.0f", latestPumpVolume) + "U"))
+            if let lastPumpClock = lastPumpRecord["clock"] as? String{
+                if let lastPumpTime = formatter.date(from: lastPumpClock)?.timeIntervalSince1970  {
+                    if let activeProfile = lastPumpRecord["extended"]?["ActiveProfile"] as? String {
+                        tableData.append(infoData(name: "Profile", value: activeProfile))
+                    }
+                    if let reservoirOverride = lastPumpRecord["reservoir_display_override"] as? String {
+                        latestPumpVolume = 50.0
+                        tableData.append(infoData(name: "Reservoir", value: reservoirOverride + "U"))
+                    }
+                    else {
+                        if let reservoirData = lastPumpRecord["reservoir"] as? Double {
+                            latestPumpVolume = reservoirData
+                            //tableData[5].value = String(format:"%.0f", reservoirData) + "U"
+                            tableData.append(infoData(name: "Reservoir", value: String(format:"%.0f", reservoirData) + "U"))
+                        } else {
+                            latestPumpVolume = 50.0
+                            //tableData[5].value = "50+U"
+                            tableData.append(infoData(name: "Reservoir", value: String(format:"%.0f", latestPumpVolume) + "U"))
+                        }
+                    }
                 }
-                
+
                 if let uploader = lastDeviceStatus?["uploader"] as? [String:AnyObject] {
                     let upbat = uploader["battery"] as! Double
                     tableData.append(infoData(name: "Uploader", value: String(format:"%.0f", upbat) + "%"))
+                }
+                else
+                {
+                    if let uploaderBat = lastDeviceStatus?["uploaderBattery"] as? Double {
+                        tableData.append(infoData(name: "Uploader", value: String(format:"%.0f", uploaderBat) + "%"))
+                    }
                 }
             }
         }
@@ -539,7 +556,7 @@ extension MainViewController {
                         }
                         if wasEnacted {
                             if let sensRatio = lastLoopRecord["suggested"]?["sensitivityRatio"] as? Double {
-                                tableData.append(infoData(name: "Autosens ratio", value: String(format: "%.2f", sensRatio)))
+                                tableData.append(infoData(name: "Autosens", value: String(format: "%.0f", sensRatio * 100)+"%"))
                             }
                             if let iobdata = lastLoopRecord["suggested"]?["IOB"] as? Double {
                                 //tableData[0].value = String(format:"%.2f", (iobdata))

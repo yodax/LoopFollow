@@ -307,22 +307,22 @@ extension MainViewController {
         
         // Setup the chart data of all lines
         let data = LineChartData()
-        data.addDataSet(lineBG) // Dataset 0
-        data.addDataSet(linePrediction) // Dataset 1
-        data.addDataSet(lineBasal) // Dataset 2
-        data.addDataSet(lineBolus) // Dataset 3
-        data.addDataSet(lineCarbs) // Dataset 4
-        data.addDataSet(lineBasalScheduled) // Dataset 5
-        data.addDataSet(lineOverride) // Dataset 6
-        data.addDataSet(lineBGCheck) // Dataset 7
-        data.addDataSet(lineSuspend) // Dataset 8
-        data.addDataSet(lineResume) // Dataset 9
-        data.addDataSet(lineSensor) // Dataset 10
-        data.addDataSet(lineNote) // Dataset 11
-        data.addDataSet(linePredictionCOB) // Dataset 12
-        data.addDataSet(linePredictionIOB) // Dataset 13
-        data.addDataSet(linePredictionZT) // Dataset 14
-        data.addDataSet(linePredictionUAM) // Dataset 15
+        data.addDataSet(dataSet: lineBG) // Dataset 0
+        data.addDataSet(dataSet: linePrediction) // Dataset 1
+        data.addDataSet(dataSet: lineBasal) // Dataset 2
+        data.addDataSet(dataSet: lineBolus) // Dataset 3
+        data.addDataSet(dataSet: lineCarbs) // Dataset 4
+        data.addDataSet(dataSet: lineBasalScheduled) // Dataset 5
+        data.addDataSet(dataSet: lineOverride) // Dataset 6
+        data.addDataSet(dataSet: lineBGCheck) // Dataset 7
+        data.addDataSet(dataSet: lineSuspend) // Dataset 8
+        data.addDataSet(dataSet: lineResume) // Dataset 9
+        data.addDataSet(dataSet: lineSensor) // Dataset 10
+        data.addDataSet(dataSet: lineNote) // Dataset 11
+        data.addDataSet(dataSet: linePredictionCOB) // Dataset 12
+        data.addDataSet(dataSet: linePredictionIOB) // Dataset 13
+        data.addDataSet(dataSet: linePredictionZT) // Dataset 14
+        data.addDataSet(dataSet: linePredictionUAM) // Dataset 15
 
         data.setValueFont(UIFont.systemFont(ofSize: 12))
         
@@ -1212,22 +1212,22 @@ extension MainViewController {
         
         // Setup the chart data of all lines
         let data = LineChartData()
-        data.addDataSet(lineBG) // Dataset 0
-        data.addDataSet(linePrediction) // Dataset 1
-        data.addDataSet(lineBasal) // Dataset 2
-        data.addDataSet(lineBolus) // Dataset 3
-        data.addDataSet(lineCarbs) // Dataset 4
-        data.addDataSet(lineBasalScheduled) // Dataset 5
-        data.addDataSet(lineOverride) // Dataset 6
-        data.addDataSet(lineBGCheck) // Dataset 7
-        data.addDataSet(lineSuspend) // Dataset 8
-        data.addDataSet(lineResume) // Dataset 9
-        data.addDataSet(lineSensor) // Dataset 10
-        data.addDataSet(lineNote) // Dataset 11
-        data.addDataSet(linePredictionCOB) // Dataset 12
-        data.addDataSet(linePredictionIOB) // Dataset 13
-        data.addDataSet(linePredictionZT) // Dataset 14
-        data.addDataSet(linePredictionUAM) // Dataset 15
+        data.addDataSet(dataSet: lineBG) // Dataset 0
+        data.addDataSet(dataSet: linePrediction) // Dataset 1
+        data.addDataSet(dataSet: lineBasal) // Dataset 2
+        data.addDataSet(dataSet: lineBolus) // Dataset 3
+        data.addDataSet(dataSet: lineCarbs) // Dataset 4
+        data.addDataSet(dataSet: lineBasalScheduled) // Dataset 5
+        data.addDataSet(dataSet: lineOverride) // Dataset 6
+        data.addDataSet(dataSet: lineBGCheck) // Dataset 7
+        data.addDataSet(dataSet: lineSuspend) // Dataset 8
+        data.addDataSet(dataSet: lineResume) // Dataset 9
+        data.addDataSet(dataSet: lineSensor) // Dataset 10
+        data.addDataSet(dataSet: lineNote) // Dataset 11
+        data.addDataSet(dataSet: linePredictionCOB) // Dataset 12
+        data.addDataSet(dataSet: linePredictionIOB) // Dataset 13
+        data.addDataSet(dataSet: linePredictionZT) // Dataset 14
+        data.addDataSet(dataSet: linePredictionUAM) // Dataset 15
         
         BGChartFull.highlightPerDragEnabled = true
         BGChartFull.leftAxis.enabled = false
