@@ -45,6 +45,10 @@ class NightscoutViewController: UIViewController {
     }
 
     @objc func reloadWebView(_ sender: UIRefreshControl) {
+        URLCache.shared.removeAllCachedResponses()
+        URLCache.shared.diskCapacity = 0
+        URLCache.shared.memoryCapacity = 0
+
         webView.reload()
         sender.endRefreshing()
     }

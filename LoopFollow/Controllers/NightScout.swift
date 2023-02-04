@@ -522,8 +522,25 @@ extension MainViewController {
                 }
 
                 if let uploader = lastDeviceStatus?["uploader"] as? [String:AnyObject] {
-                    let upbat = uploader["battery"] as! Double
-                    tableData.append(infoData(name: "Uploader", value: String(format:"%.0f", upbat) + "%"))
+                    if let upbat = uploader["battery"] as? Double{
+                        tableData.append(infoData(name: "Uploader", value: String(format:"%.0f", upbat) + "%"))
+                    }
+                    else
+                    {
+                        if let uploaderBat = lastDeviceStatus?["uploaderBattery"] as? Double {
+                            if let charging = lastDeviceStatus?["isCharging"] as? Bool {
+                                if (charging) {
+                                    tableData.append(infoData(name: "Uploader", value: String(format:"%.0f", uploaderBat) + "% ⚡️"))
+                                }
+                                else {
+                                    tableData.append(infoData(name: "Uploader", value: String(format:"%.0f", uploaderBat) + "% ⬇️"))
+                                }
+                            }
+                            else {
+                                tableData.append(infoData(name: "Uploader", value: String(format:"%.0f", uploaderBat) + "%"))
+                            }
+                        }
+                    }
                 }
                 else
                 {
