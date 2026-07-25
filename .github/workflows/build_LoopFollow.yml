@@ -10,7 +10,7 @@ on:
 env:  
   GH_PAT: ${{ secrets.GH_PAT }}
   UPSTREAM_REPO: loopandlearn/LoopFollow
-  UPSTREAM_BRANCH: ${{ github.ref_name }} # branch on upstream repository to sync from (replace with specific branch name if needed)
+  UPSTREAM_BRANCH: main # upstream's default branch is lowercase 'main'; this fork's branch stayed capitalized 'Main'
   TARGET_BRANCH: ${{ github.ref_name }} # target branch on fork to be kept in sync
 
 jobs:
